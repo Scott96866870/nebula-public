@@ -1,0 +1,22 @@
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Test and build artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local configuration and editor files
+.env
+.env.*
+*.local.json
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
