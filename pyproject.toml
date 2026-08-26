@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nebula-public"
-version = "0.1.0"
-description = "Public metadata and documentation release for Nebula."
+version = "0.2.0"
+description = "Local tools for inspecting and validating Nebula's public release boundary."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Nebula contributors" }]

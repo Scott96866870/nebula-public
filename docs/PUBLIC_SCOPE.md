@@ -7,9 +7,10 @@ easy to inspect without distributing private or operational source material.
 ## Included
 
 - Public project overview.
-- Static release metadata.
-- A local command that prints the metadata as JSON.
-- Unit tests for the public command.
+- Static release metadata, rendered as JSON or Markdown.
+- A local command that verifies a directory against release exclusions.
+- Explicit local export of release cards.
+- Unit tests for catalog, verification, and export behavior.
 
 ## Excluded
 
@@ -23,3 +24,7 @@ easy to inspect without distributing private or operational source material.
 Changes to this public edition should remain deterministic and local. Do not
 add network clients, file-upload behavior, credential handling, or external
 service integrations to this repository without an explicit release review.
+
+The `verify` command checks for local configuration, telemetry, credentials,
+private keys, and build directories. It reports relative paths and rule names,
+not file contents.

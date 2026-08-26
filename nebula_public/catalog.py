@@ -19,15 +19,35 @@ class PublicRelease:
         """Return JSON-compatible release metadata."""
         return asdict(self)
 
+    def to_markdown(self) -> str:
+        """Render a portable, human-readable release card."""
+        lines = [
+            f"# {self.name}",
+            "",
+            f"**Version:** {self.version}",
+            "",
+            self.summary,
+            "",
+            "## Included",
+            "",
+            *(f"- {item}" for item in self.included),
+            "",
+            "## Excluded",
+            "",
+            *(f"- {item}" for item in self.excluded),
+            "",
+        ]
+        return "\n".join(lines)
+
 
 release = PublicRelease(
     name="Nebula Public Edition",
-    version="0.1.0",
-    summary="A read-only public overview and metadata release.",
+    version="0.2.0",
+    summary="A local toolkit for inspecting and validating the public release boundary.",
     included=(
         "Public documentation",
         "Release metadata",
-        "Local read-only command-line interface",
+        "Local catalog, verification, and export commands",
     ),
     excluded=(
         "Operational modules",

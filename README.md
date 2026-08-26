@@ -8,9 +8,10 @@ this repository.
 
 This edition contains:
 
-- A local, read-only metadata command.
-- Public release notes and project-boundary documentation.
-- Tests for the metadata command.
+- A local release catalog in JSON or Markdown.
+- A deterministic public-boundary verifier for local directories.
+- Local export support for release cards.
+- Public release notes, scope documentation, and tests.
 
 This edition intentionally contains no operational networking, traffic
 generation, credential or session handling, bypassing, injection, binary
@@ -25,7 +26,15 @@ Requires Python 3.10 or newer.
 python -m nebula_public
 python main.py info
 python main.py catalog
+python main.py catalog --format markdown
+python main.py verify
+python main.py export --output release-card.md
 ```
+
+`verify` returns status code `0` when the target contains no excluded files,
+and `1` when it finds a blocked path. It never sends data or connects to an
+external service. `export` writes only to the explicitly supplied local path
+and will not replace an existing file unless `--force` is used.
 
 ## Test
 
