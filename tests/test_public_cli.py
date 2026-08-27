@@ -11,9 +11,16 @@ import unittest
 
 from nebula_public.audit import audit_public_tree
 from nebula_public.__main__ import main
+from nebula_public.manifest import build_manifest, load_manifest, verify_manifest
 
 
 class PublicCliTests(unittest.TestCase):
+    def make_public_tree(self, root: Path) -> None:
+        (root / "README.md").write_text("test", encoding="utf-8")
+        (root / "pyproject.toml").write_text("test", encoding="utf-8")
+        (root / "docs").mkdir()
+        (root / "docs" / "PUBLIC_SCOPE.md").write_text("test", encoding="utf-8")
+
     def run_command(self, *args: str) -> tuple[int, str]:
         stream = io.StringIO()
         with redirect_stdout(stream):
@@ -28,7 +35,7 @@ class PublicCliTests(unittest.TestCase):
     def test_default_info_is_read_only_metadata(self) -> None:
         payload = self.run_json_command()
         self.assertEqual(payload["name"], "Nebula Public Edition")
-        self.assertEqual(payload["version"], "0.2.0")
+        self.assertEqual(payload["version"], "0.3.0")
         self.assertNotIn("excluded", payload)
 
     def test_catalog_describes_public_boundary(self) -> None:
@@ -50,10 +57,7 @@ class PublicCliTests(unittest.TestCase):
     def test_verifier_reports_blocked_local_file(self) -> None:
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            (root / "README.md").write_text("test", encoding="utf-8")
-            (root / "pyproject.toml").write_text("test", encoding="utf-8")
-            (root / "docs").mkdir()
-            (root / "docs" / "PUBLIC_SCOPE.md").write_text("test", encoding="utf-8")
+            self.make_public_tree(root)
             (root / "config.local.json").write_text("{}", encoding="utf-8")
 
             report = audit_public_tree(root)
@@ -82,6 +86,50 @@ class PublicCliTests(unittest.TestCase):
             self.assertEqual(status, 2)
             self.assertIn("Refusing to overwrite", message)
             self.assertEqual(output.read_text(encoding="utf-8"), "original")
+
+    def test_manifest_round_trip_and_integrity_check(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            tracked_file = root / "package.py"
+            tracked_file.write_text("version = 1\n", encoding="utf-8")
+            removed_file = root / "removed.py"
+            removed_file.write_text("remove me\n", encoding="utf-8")
+
+            manifest = build_manifest(root)
+            self.assertTrue(verify_manifest(root, manifest).ok)
+
+            tracked_file.write_text("version = 2\n", encoding="utf-8")
+            removed_file.unlink()
+            (root / "unexpected.txt").write_text("new", encoding="utf-8")
+            report = verify_manifest(root, manifest)
+
+        self.assertFalse(report.ok)
+        self.assertEqual(report.modified, ("package.py",))
+        self.assertEqual(report.missing, ("removed.py",))
+        self.assertEqual(report.unexpected, ("unexpected.txt",))
+
+    def test_cli_manifest_excludes_its_output_and_verifies_cleanly(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            manifest_path = root / "release-manifest.json"
+            status, printed_path = self.run_command(
+                "manifest", "--path", str(root), "--output", str(manifest_path)
+            )
+
+            self.assertEqual(status, 0)
+            self.assertEqual(Path(printed_path.strip()), manifest_path.resolve())
+            self.assertEqual(load_manifest(manifest_path).excluded_paths, ("release-manifest.json",))
+
+            status, output = self.run_command(
+                "verify", "--path", str(root), "--manifest", str(manifest_path)
+            )
+
+        self.assertEqual(status, 0)
+        payload = json.loads(output)
+        self.assertTrue(payload["ok"])
+        self.assertTrue(payload["integrity"]["ok"])
 
 
 if __name__ == "__main__":

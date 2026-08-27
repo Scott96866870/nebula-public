@@ -9,8 +9,10 @@ easy to inspect without distributing private or operational source material.
 - Public project overview.
 - Static release metadata, rendered as JSON or Markdown.
 - A local command that verifies a directory against release exclusions.
+- Deterministic SHA-256 manifests and local integrity comparison.
 - Explicit local export of release cards.
-- Unit tests for catalog, verification, and export behavior.
+- Unit tests and GitHub Actions checks for catalog, verification, export, and
+  integrity behavior.
 
 ## Excluded
 
@@ -28,3 +30,7 @@ service integrations to this repository without an explicit release review.
 The `verify` command checks for local configuration, telemetry, credentials,
 private keys, and build directories. It reports relative paths and rule names,
 not file contents.
+
+When used with `--manifest`, verification also compares the current directory
+with a supplied JSON snapshot. The report names missing, modified, and
+unexpected paths without printing file contents or hashes.

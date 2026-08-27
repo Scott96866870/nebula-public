@@ -9,6 +9,7 @@ from typing import Sequence
 
 from .audit import audit_public_tree
 from .catalog import release
+from .manifest import build_manifest, load_manifest, verify_manifest
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -34,6 +35,31 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path.cwd(),
         help="Directory to inspect (default: current directory).",
+    )
+    verify_parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="Optional JSON manifest to compare against the local directory.",
+    )
+
+    manifest_parser = subparsers.add_parser(
+        "manifest", help="Build a deterministic SHA-256 manifest for a local tree."
+    )
+    manifest_parser.add_argument(
+        "--path",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory to record (default: current directory).",
+    )
+    manifest_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional local JSON destination. Prints to standard output when omitted.",
+    )
+    manifest_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace an existing manifest destination.",
     )
 
     export_parser = subparsers.add_parser(
@@ -79,12 +105,43 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if command == "verify":
         try:
-            report = audit_public_tree(args.path)
+            boundary_report = audit_public_tree(args.path)
+            if args.manifest is not None:
+                integrity_report = verify_manifest(
+                    args.path, load_manifest(args.manifest)
+                )
+                payload = {
+                    "boundary": boundary_report.to_dict(),
+                    "integrity": integrity_report.to_dict(),
+                    "ok": boundary_report.ok and integrity_report.ok,
+                }
+                print(json.dumps(payload, indent=2, sort_keys=True))
+                return 0 if payload["ok"] else 1
         except ValueError as error:
             print(json.dumps({"ok": False, "error": str(error)}, indent=2))
             return 2
-        print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
-        return 0 if report.ok else 1
+        print(json.dumps(boundary_report.to_dict(), indent=2, sort_keys=True))
+        return 0 if boundary_report.ok else 1
+
+    if command == "manifest":
+        output = args.output.expanduser() if args.output is not None else None
+        if output is not None and output.exists() and not args.force:
+            print(f"Refusing to overwrite existing file: {output}")
+            return 2
+        if output is not None and not output.parent.is_dir():
+            print(f"Output directory does not exist: {output.parent}")
+            return 2
+        try:
+            manifest = build_manifest(args.path, exclude=(() if output is None else (output,)))
+        except ValueError as error:
+            print(json.dumps({"ok": False, "error": str(error)}, indent=2))
+            return 2
+        if output is None:
+            print(manifest.to_json(), end="")
+            return 0
+        output.write_text(manifest.to_json(), encoding="utf-8")
+        print(output.resolve())
+        return 0
 
     if command == "export":
         output = args.output.expanduser()
