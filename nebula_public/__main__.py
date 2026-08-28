@@ -9,7 +9,7 @@ from typing import Sequence
 
 from .audit import audit_public_tree
 from .catalog import release
-from .manifest import build_manifest, load_manifest, verify_manifest
+from .manifest import build_manifest, compare_manifests, load_manifest, verify_manifest
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -60,6 +60,18 @@ def _parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="Replace an existing manifest destination.",
+    )
+
+    diff_parser = subparsers.add_parser(
+        "diff", help="Compare two JSON manifests without reading source files."
+    )
+    diff_parser.add_argument("left", type=Path, help="Earlier manifest file.")
+    diff_parser.add_argument("right", type=Path, help="Later manifest file.")
+    diff_parser.add_argument(
+        "--format",
+        choices=("json", "markdown"),
+        default="json",
+        help="Output format (default: json).",
     )
 
     export_parser = subparsers.add_parser(
@@ -141,6 +153,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         output.write_text(manifest.to_json(), encoding="utf-8")
         print(output.resolve())
+        return 0
+
+    if command == "diff":
+        try:
+            diff = compare_manifests(
+                load_manifest(args.left), load_manifest(args.right)
+            )
+        except ValueError as error:
+            print(json.dumps({"ok": False, "error": str(error)}, indent=2))
+            return 2
+        if args.format == "markdown":
+            print(diff.to_markdown(), end="")
+        else:
+            print(json.dumps(diff.to_dict(), indent=2, sort_keys=True))
         return 0
 
     if command == "export":

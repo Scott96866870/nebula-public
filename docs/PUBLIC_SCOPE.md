@@ -10,9 +10,10 @@ easy to inspect without distributing private or operational source material.
 - Static release metadata, rendered as JSON or Markdown.
 - A local command that verifies a directory against release exclusions.
 - Deterministic SHA-256 manifests and local integrity comparison.
+- Manifest-to-manifest diff reports for release review.
 - Explicit local export of release cards.
 - Unit tests and GitHub Actions checks for catalog, verification, export, and
-  integrity behavior.
+integrity behavior.
 
 ## Excluded
 
@@ -34,3 +35,7 @@ not file contents.
 When used with `--manifest`, verification also compares the current directory
 with a supplied JSON snapshot. The report names missing, modified, and
 unexpected paths without printing file contents or hashes.
+
+The `diff` command compares two JSON manifests offline and reports only path
+names and release metadata. It does not access the files referenced by either
+manifest.

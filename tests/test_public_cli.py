@@ -11,7 +11,12 @@ import unittest
 
 from nebula_public.audit import audit_public_tree
 from nebula_public.__main__ import main
-from nebula_public.manifest import build_manifest, load_manifest, verify_manifest
+from nebula_public.manifest import (
+    build_manifest,
+    compare_manifests,
+    load_manifest,
+    verify_manifest,
+)
 
 
 class PublicCliTests(unittest.TestCase):
@@ -35,7 +40,7 @@ class PublicCliTests(unittest.TestCase):
     def test_default_info_is_read_only_metadata(self) -> None:
         payload = self.run_json_command()
         self.assertEqual(payload["name"], "Nebula Public Edition")
-        self.assertEqual(payload["version"], "0.3.0")
+        self.assertEqual(payload["version"], "0.4.0")
         self.assertNotIn("excluded", payload)
 
     def test_catalog_describes_public_boundary(self) -> None:
@@ -130,6 +135,53 @@ class PublicCliTests(unittest.TestCase):
         payload = json.loads(output)
         self.assertTrue(payload["ok"])
         self.assertTrue(payload["integrity"]["ok"])
+
+    def test_manifest_diff_reports_release_file_changes(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            (root / "old.py").write_text("old", encoding="utf-8")
+            earlier = build_manifest(root)
+
+            (root / "old.py").write_text("changed", encoding="utf-8")
+            (root / "new.py").write_text("new", encoding="utf-8")
+            later = build_manifest(root)
+
+            diff = compare_manifests(earlier, later)
+
+        self.assertTrue(diff.changed)
+        self.assertEqual(diff.added, ("new.py",))
+        self.assertEqual(diff.modified, ("old.py",))
+        self.assertIn("## Added", diff.to_markdown())
+
+    def test_cli_diff_supports_json_and_markdown(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            left_path = root / "left.json"
+            right_path = root / "right.json"
+            left_path.write_text(
+                build_manifest(root, exclude=(left_path, right_path)).to_json(),
+                encoding="utf-8",
+            )
+            (root / "new.py").write_text("new", encoding="utf-8")
+            right_path.write_text(
+                build_manifest(root, exclude=(left_path, right_path)).to_json(),
+                encoding="utf-8",
+            )
+
+            status, output = self.run_command(
+                "diff", str(left_path), str(right_path), "--format", "json"
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(json.loads(output)["added"], ["new.py"])
+
+            status, output = self.run_command(
+                "diff", str(left_path), str(right_path), "--format", "markdown"
+            )
+
+        self.assertEqual(status, 0)
+        self.assertIn("# Manifest diff", output)
 
 
 if __name__ == "__main__":

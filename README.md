@@ -11,6 +11,7 @@ This edition contains:
 - A local release catalog in JSON or Markdown.
 - A deterministic public-boundary verifier for local directories.
 - Reproducible SHA-256 manifests and integrity verification.
+- Manifest-to-manifest diff reports for release review.
 - Local export support for release cards.
 - Public release notes, scope documentation, and tests.
 
@@ -32,6 +33,8 @@ python main.py verify
 python main.py export --output release-card.md
 python main.py manifest --output release-manifest.json
 python main.py verify --manifest release-manifest.json
+python main.py diff previous-manifest.json release-manifest.json
+python main.py diff previous-manifest.json release-manifest.json --format markdown
 ```
 
 `verify` returns status code `0` when the target contains no excluded files,
@@ -49,6 +52,10 @@ directory, the manifest automatically excludes itself.
 Use `verify --manifest release-manifest.json` before sharing an archive or
 cutting a release. In addition to the public-boundary audit, it reports files
 that are missing, modified, or unexpectedly present.
+
+`diff` compares two manifests without reading the underlying source tree. It
+reports added, removed, modified, and unchanged relative paths and can render
+the result as JSON or Markdown for a changelog.
 
 The repository's GitHub Actions workflow runs the unit test suite on every
 push and pull request.

@@ -77,6 +77,54 @@ class IntegrityReport:
         }
 
 
+@dataclass(frozen=True)
+class ManifestDiff:
+    """File-level changes between two release manifests."""
+
+    left_release: str
+    right_release: str
+    added: tuple[str, ...]
+    removed: tuple[str, ...]
+    modified: tuple[str, ...]
+    unchanged: tuple[str, ...]
+
+    @property
+    def changed(self) -> bool:
+        return bool(self.added or self.removed or self.modified)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "added": list(self.added),
+            "changed": self.changed,
+            "left_release": self.left_release,
+            "modified": list(self.modified),
+            "removed": list(self.removed),
+            "right_release": self.right_release,
+            "unchanged": list(self.unchanged),
+        }
+
+    def to_markdown(self) -> str:
+        """Render a concise release comparison for a changelog or review."""
+        lines = [
+            f"# Manifest diff: {self.left_release} -> {self.right_release}",
+            "",
+            f"**Changed:** {'yes' if self.changed else 'no'}",
+            "",
+        ]
+        for heading, values in (
+            ("Added", self.added),
+            ("Removed", self.removed),
+            ("Modified", self.modified),
+            ("Unchanged", self.unchanged),
+        ):
+            lines.extend([f"## {heading}", ""])
+            lines.extend(f"- {value}" for value in values)
+            if not values:
+                lines.append("- None")
+            lines.append("")
+        return "\n".join(lines)
+
+
 def _file_digest(path: Path) -> str:
     digest = sha256()
     with path.open("rb") as source:
@@ -224,4 +272,23 @@ def verify_manifest(root: str | Path, manifest: ReleaseManifest) -> IntegrityRep
         missing=missing,
         modified=modified,
         unexpected=unexpected,
+    )
+
+
+def compare_manifests(left: ReleaseManifest, right: ReleaseManifest) -> ManifestDiff:
+    """Compare two manifests without reading files from disk."""
+    left_entries = {entry.path: entry for entry in left.entries}
+    right_entries = {entry.path: entry for entry in right.entries}
+    shared = left_entries.keys() & right_entries.keys()
+    return ManifestDiff(
+        left_release=f"{left.release_name} {left.release_version}",
+        right_release=f"{right.release_name} {right.release_version}",
+        added=tuple(sorted(right_entries.keys() - left_entries.keys())),
+        removed=tuple(sorted(left_entries.keys() - right_entries.keys())),
+        modified=tuple(
+            sorted(path for path in shared if left_entries[path] != right_entries[path])
+        ),
+        unchanged=tuple(
+            sorted(path for path in shared if left_entries[path] == right_entries[path])
+        ),
     )
