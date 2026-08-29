@@ -248,13 +248,22 @@ def _validate_relative_paths(values: list[object], label: str) -> list[str]:
     return sorted(paths)
 
 
-def verify_manifest(root: str | Path, manifest: ReleaseManifest) -> IntegrityReport:
+def verify_manifest(
+    root: str | Path,
+    manifest: ReleaseManifest,
+    *,
+    exclude: Iterable[str | Path] = (),
+) -> IntegrityReport:
     """Compare a local tree with a previously generated release manifest."""
     base = Path(root).resolve()
     if not base.is_dir():
         raise ValueError(f"Manifest path is not a directory: {base}")
 
-    actual = {entry.path: entry for entry in _manifest_entries(base, set(manifest.excluded_paths))}
+    excluded_paths = set(manifest.excluded_paths)
+    for item in exclude:
+        if (relative := _relative_path(base, Path(item))) is not None:
+            excluded_paths.add(relative)
+    actual = {entry.path: entry for entry in _manifest_entries(base, excluded_paths)}
     expected = {entry.path: entry for entry in manifest.entries}
     missing = tuple(sorted(expected.keys() - actual.keys()))
     unexpected = tuple(sorted(actual.keys() - expected.keys()))

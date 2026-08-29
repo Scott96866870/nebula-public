@@ -12,6 +12,7 @@ This edition contains:
 - A deterministic public-boundary verifier for local directories.
 - Reproducible SHA-256 manifests and integrity verification.
 - Manifest-to-manifest diff reports for release review.
+- Deterministic ZIP bundle generation for a public release.
 - Local export support for release cards.
 - Public release notes, scope documentation, and tests.
 
@@ -35,6 +36,8 @@ python main.py manifest --output release-manifest.json
 python main.py verify --manifest release-manifest.json
 python main.py diff previous-manifest.json release-manifest.json
 python main.py diff previous-manifest.json release-manifest.json --format markdown
+python main.py bundle --output nebula-public.zip
+python main.py bundle --output nebula-public.zip --manifest release-manifest.json
 ```
 
 `verify` returns status code `0` when the target contains no excluded files,
@@ -56,6 +59,12 @@ that are missing, modified, or unexpectedly present.
 `diff` compares two manifests without reading the underlying source tree. It
 reports added, removed, modified, and unchanged relative paths and can render
 the result as JSON or Markdown for a changelog.
+
+`bundle` validates the public boundary before creating a ZIP archive. Entries
+are sorted and use normalized timestamps and permissions, so repeated builds
+from unchanged input produce identical archive bytes. Existing destinations
+are protected unless `--force` is supplied. Add `--manifest` to require an
+integrity match before packaging.
 
 The repository's GitHub Actions workflow runs the unit test suite on every
 push and pull request.

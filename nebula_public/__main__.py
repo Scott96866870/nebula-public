@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .audit import audit_public_tree
+from .bundle import create_bundle
 from .catalog import release
 from .manifest import build_manifest, compare_manifests, load_manifest, verify_manifest
 
@@ -72,6 +73,32 @@ def _parser() -> argparse.ArgumentParser:
         choices=("json", "markdown"),
         default="json",
         help="Output format (default: json).",
+    )
+
+    bundle_parser = subparsers.add_parser(
+        "bundle", help="Build a deterministic ZIP archive of a public tree."
+    )
+    bundle_parser.add_argument(
+        "--path",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory to bundle (default: current directory).",
+    )
+    bundle_parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Destination ZIP path.",
+    )
+    bundle_parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="Optional manifest to verify before creating the archive.",
+    )
+    bundle_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace an existing ZIP destination.",
     )
 
     export_parser = subparsers.add_parser(
@@ -167,6 +194,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(diff.to_markdown(), end="")
         else:
             print(json.dumps(diff.to_dict(), indent=2, sort_keys=True))
+        return 0
+
+    if command == "bundle":
+        output = args.output.expanduser()
+        if output.exists() and not args.force:
+            print(f"Refusing to overwrite existing file: {output}")
+            return 2
+        try:
+            files = create_bundle(
+                args.path,
+                output,
+                manifest=(load_manifest(args.manifest) if args.manifest else None),
+            )
+        except ValueError as error:
+            print(json.dumps({"ok": False, "error": str(error)}, indent=2))
+            return 2
+        print(
+            json.dumps(
+                {"files": list(files), "ok": True, "output": str(output.resolve())},
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0
 
     if command == "export":
