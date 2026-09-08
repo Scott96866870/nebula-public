@@ -11,6 +11,7 @@ from .audit import audit_public_tree
 from .bundle import create_bundle
 from .catalog import release
 from .manifest import build_manifest, compare_manifests, load_manifest, verify_manifest
+from .report import build_release_report
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -99,6 +100,27 @@ def _parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="Replace an existing ZIP destination.",
+    )
+
+    report_parser = subparsers.add_parser(
+        "report", help="Summarize local release readiness and file statistics."
+    )
+    report_parser.add_argument(
+        "--path",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory to inspect (default: current directory).",
+    )
+    report_parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="Optional manifest to verify and compare with the current release.",
+    )
+    report_parser.add_argument(
+        "--format",
+        choices=("json", "markdown"),
+        default="json",
+        help="Output format (default: json).",
     )
 
     export_parser = subparsers.add_parser(
@@ -218,6 +240,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         )
         return 0
+
+    if command == "report":
+        try:
+            report = build_release_report(
+                args.path,
+                manifest=(load_manifest(args.manifest) if args.manifest else None),
+            )
+        except ValueError as error:
+            print(json.dumps({"ok": False, "error": str(error)}, indent=2))
+            return 2
+        if args.format == "markdown":
+            print(report.to_markdown(), end="")
+        else:
+            print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+        return 0 if report.ok else 1
 
     if command == "export":
         output = args.output.expanduser()

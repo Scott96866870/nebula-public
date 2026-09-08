@@ -12,6 +12,7 @@ from .manifest import (
     load_manifest,
     verify_manifest,
 )
+from .report import ExtensionSummary, ReleaseReport, build_release_report
 
 __all__ = [
     "AuditReport",
@@ -20,11 +21,14 @@ __all__ = [
     "ManifestDiff",
     "PublicRelease",
     "ReleaseManifest",
+    "ExtensionSummary",
+    "ReleaseReport",
     "audit_public_tree",
     "create_bundle",
     "create_bundle_from_manifest",
     "build_manifest",
     "compare_manifests",
+    "build_release_report",
     "load_manifest",
     "release",
     "verify_manifest",

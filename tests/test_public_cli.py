@@ -19,6 +19,7 @@ from nebula_public.manifest import (
     load_manifest,
     verify_manifest,
 )
+from nebula_public.report import build_release_report
 
 
 class PublicCliTests(unittest.TestCase):
@@ -42,7 +43,7 @@ class PublicCliTests(unittest.TestCase):
     def test_default_info_is_read_only_metadata(self) -> None:
         payload = self.run_json_command()
         self.assertEqual(payload["name"], "Nebula Public Edition")
-        self.assertEqual(payload["version"], "0.5.0")
+        self.assertEqual(payload["version"], "0.6.0")
         self.assertNotIn("excluded", payload)
 
     def test_catalog_describes_public_boundary(self) -> None:
@@ -263,6 +264,56 @@ class PublicCliTests(unittest.TestCase):
         self.assertEqual(first_status, 0)
         self.assertEqual(second_status, 0)
         self.assertTrue(json.loads(second_output)["ok"])
+
+    def test_report_summarizes_a_ready_release(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            (root / "module.py").write_text("value = 1\n", encoding="utf-8")
+
+            report = build_release_report(root)
+
+        self.assertTrue(report.ok)
+        self.assertEqual(report.file_count, 4)
+        self.assertEqual(report.recommendations, ("Ready for public review.",))
+        self.assertIn("# Release report", report.to_markdown())
+
+    def test_report_identifies_manifest_version_mismatch(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            manifest = build_manifest(root)
+            mismatched = type(manifest)(
+                schema_version=manifest.schema_version,
+                release_name=manifest.release_name,
+                release_version="0.0.0",
+                entries=manifest.entries,
+                excluded_paths=manifest.excluded_paths,
+            )
+
+            report = build_release_report(root, manifest=mismatched)
+
+        self.assertFalse(report.ok)
+        self.assertFalse(report.manifest_release_match)
+        self.assertIn("current release version", report.recommendations[0])
+
+    def test_cli_report_supports_json_and_markdown(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+
+            status, output = self.run_command("report", "--path", str(root))
+            self.assertEqual(status, 0)
+            payload = json.loads(output)
+            self.assertTrue(payload["ok"])
+            self.assertIsNone(payload["integrity"])
+
+            status, output = self.run_command(
+                "report", "--path", str(root), "--format", "markdown"
+            )
+
+        self.assertEqual(status, 0)
+        self.assertIn("**Status:** READY", output)
 
 
 if __name__ == "__main__":

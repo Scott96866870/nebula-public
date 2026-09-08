@@ -13,6 +13,7 @@ This edition contains:
 - Reproducible SHA-256 manifests and integrity verification.
 - Manifest-to-manifest diff reports for release review.
 - Deterministic ZIP bundle generation for a public release.
+- Aggregated release-readiness reports with file statistics.
 - Local export support for release cards.
 - Public release notes, scope documentation, and tests.
 
@@ -38,6 +39,8 @@ python main.py diff previous-manifest.json release-manifest.json
 python main.py diff previous-manifest.json release-manifest.json --format markdown
 python main.py bundle --output nebula-public.zip
 python main.py bundle --output nebula-public.zip --manifest release-manifest.json
+python main.py report
+python main.py report --manifest release-manifest.json --format markdown
 ```
 
 `verify` returns status code `0` when the target contains no excluded files,
@@ -65,6 +68,11 @@ are sorted and use normalized timestamps and permissions, so repeated builds
 from unchanged input produce identical archive bytes. Existing destinations
 are protected unless `--force` is supplied. Add `--manifest` to require an
 integrity match before packaging.
+
+`report` combines the boundary audit, optional manifest integrity check,
+version alignment, file count, byte total, extension summary, and actionable
+recommendations. It is designed for a final offline release review and can be
+rendered as JSON or Markdown.
 
 The repository's GitHub Actions workflow runs the unit test suite on every
 push and pull request.

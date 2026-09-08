@@ -42,12 +42,12 @@ class PublicRelease:
 
 release = PublicRelease(
     name="Nebula Public Edition",
-    version="0.5.0",
-    summary="A local toolkit for cataloging, validating, verifying, comparing, and bundling public releases.",
+    version="0.6.0",
+    summary="A local toolkit for cataloging, validating, verifying, comparing, reporting, and bundling public releases.",
     included=(
         "Public documentation",
         "Release metadata",
-        "Local catalog, verification, export, integrity, diff, and bundle commands",
+        "Local catalog, verification, export, integrity, diff, report, and bundle commands",
     ),
     excluded=(
         "Operational modules",

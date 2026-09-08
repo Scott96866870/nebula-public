@@ -12,6 +12,7 @@ easy to inspect without distributing private or operational source material.
 - Deterministic SHA-256 manifests and local integrity comparison.
 - Manifest-to-manifest diff reports for release review.
 - Deterministic ZIP bundle generation after local validation.
+- Local release-readiness reports with extension and size summaries.
 - Explicit local export of release cards.
 - Unit tests and GitHub Actions checks for catalog, verification, export, and
 integrity behavior.
@@ -45,3 +46,7 @@ The `bundle` command performs the boundary audit before writing a local ZIP.
 It uses normalized ZIP metadata for reproducible output and can require a
 matching manifest before packaging. The archive destination itself is not
 included when it is inside the source directory.
+
+The `report` command aggregates the boundary audit, optional manifest check,
+file statistics, and next-step recommendations. It reads only the selected
+local directory and manifest file.
