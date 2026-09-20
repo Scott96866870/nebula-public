@@ -6,8 +6,9 @@ from dataclasses import asdict, dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 
+from .tree import is_link, public_paths
 
-IGNORED_DIRECTORIES = frozenset({".git", ".pytest_cache", "__pycache__"})
+
 BLOCKED_PATH_PATTERNS = (
     ".env",
     ".env.*",
@@ -66,9 +67,10 @@ def audit_public_tree(root: str | Path) -> AuditReport:
 
     violations: list[AuditViolation] = []
     checked_files = 0
-    for path in sorted(base.rglob("*")):
+    for path in public_paths(base):
         relative = path.relative_to(base)
-        if any(part in IGNORED_DIRECTORIES for part in relative.parts):
+        if is_link(path):
+            violations.append(AuditViolation(relative.as_posix(), "filesystem link"))
             continue
         if path.is_dir():
             if path.name in BLOCKED_DIRECTORY_NAMES:

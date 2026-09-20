@@ -1,8 +1,9 @@
 # Nebula Public Edition
 
-Nebula Public Edition is a small, reviewable public overview of the Nebula
-project. It provides release metadata and documents the public boundary of
-this repository.
+Nebula Public Edition is a local Python toolkit for release manifests,
+integrity checks, release reports, and reproducible ZIP bundles.
+
+Current version: **0.6.1**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -54,6 +55,8 @@ and will not replace an existing file unless `--force` is used.
 entry records a relative path, byte size, and SHA-256 digest; it does not add a
 timestamp or upload anything. When the destination is inside the inspected
 directory, the manifest automatically excludes itself.
+Relative CLI output paths are interpreted from the current working directory,
+including when `--path` selects a different source directory.
 
 Use `verify --manifest release-manifest.json` before sharing an archive or
 cutting a release. In addition to the public-boundary audit, it reports files
@@ -68,6 +71,14 @@ are sorted and use normalized timestamps and permissions, so repeated builds
 from unchanged input produce identical archive bytes. Existing destinations
 are protected unless `--force` is supplied. Add `--manifest` to require an
 integrity match before packaging.
+With `--manifest`, the ZIP also omits every path listed in the manifest's
+`excluded_paths`, including the manifest itself when generated inside the tree.
+Distribute that manifest alongside the ZIP when needed.
+
+Filesystem symbolic links, broken links, and Windows junctions/reparse points
+inside the source tree are rejected. The scanner never descends into them.
+Use regular files and directories in a stable source tree while building;
+validation and packaging are not an atomic filesystem snapshot.
 
 `report` combines the boundary audit, optional manifest integrity check,
 version alignment, file count, byte total, extension summary, and actionable
@@ -75,7 +86,7 @@ recommendations. It is designed for a final offline release review and can be
 rendered as JSON or Markdown.
 
 The repository's GitHub Actions workflow runs the unit test suite on every
-push and pull request.
+push to `main` and pull request, on Linux and Windows with Python 3.10–3.13.
 
 ## Test
 
