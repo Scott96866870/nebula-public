@@ -46,6 +46,15 @@ The `bundle` command performs the boundary audit before writing a local ZIP.
 It uses normalized ZIP metadata for reproducible output and can require a
 matching manifest before packaging. The archive destination itself is not
 included when it is inside the source directory.
+When a manifest is supplied, its `excluded_paths` are omitted from the archive
+as well as the integrity check. A self-excluded manifest is distributed separately.
+
+Symbolic links (including broken links) and Windows reparse points/junctions
+are not supported within release trees. They are reported by the boundary
+audit and rejected during manifest generation or integrity verification.
+Directory traversal never follows these links, even if their names match an
+ignored directory. Regular `.git`, `.pytest_cache`, and `__pycache__` directories
+are pruned. Release builds require an unchanged input tree during the operation.
 
 The `report` command aggregates the boundary audit, optional manifest check,
 file statistics, and next-step recommendations. It reads only the selected
