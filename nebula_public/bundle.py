@@ -5,18 +5,23 @@ from __future__ import annotations
 from pathlib import Path
 import zipfile
 
-from .audit import IGNORED_DIRECTORIES, audit_public_tree
+from .audit import audit_public_tree
 from .manifest import ReleaseManifest, load_manifest, verify_manifest
+from .tree import public_paths, require_regular_path
 
 
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 
-def _files_for_bundle(root: Path, output: Path) -> list[tuple[str, Path]]:
+def _files_for_bundle(
+    root: Path, output: Path, excluded_paths: tuple[str, ...] = ()
+) -> list[tuple[str, Path]]:
     files: list[tuple[str, Path]] = []
-    for path in root.rglob("*"):
+    excluded = set(excluded_paths)
+    for path in public_paths(root):
         relative = path.relative_to(root)
-        if any(part in IGNORED_DIRECTORIES for part in relative.parts):
+        require_regular_path(path, root)
+        if relative.as_posix() in excluded:
             continue
         if path.is_file() and path.resolve() != output.resolve():
             files.append((relative.as_posix(), path))
@@ -59,12 +64,15 @@ def create_bundle(
             )
             raise ValueError(f"Manifest integrity check failed: {details}")
 
-    files = _files_for_bundle(base, destination)
+    files = _files_for_bundle(
+        base, destination, manifest.excluded_paths if manifest is not None else ()
+    )
     try:
         with zipfile.ZipFile(
             destination, mode="w", compression=zipfile.ZIP_STORED
         ) as archive:
             for relative, path in files:
+                require_regular_path(path, base)
                 info = zipfile.ZipInfo(relative, date_time=FIXED_ZIP_TIMESTAMP)
                 info.compress_type = zipfile.ZIP_STORED
                 info.external_attr = 0o100644 << 16

@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from .audit import IGNORED_DIRECTORIES
+from .tree import public_paths, require_regular_path
 from .catalog import release
 
 
@@ -143,10 +143,9 @@ def _relative_path(base: Path, candidate: Path) -> str | None:
 
 def _manifest_entries(base: Path, excluded_paths: set[str]) -> tuple[ManifestEntry, ...]:
     entries: list[ManifestEntry] = []
-    for path in sorted(base.rglob("*")):
+    for path in public_paths(base):
         relative = path.relative_to(base)
-        if any(part in IGNORED_DIRECTORIES for part in relative.parts):
-            continue
+        require_regular_path(path, base)
         if not path.is_file() or relative.as_posix() in excluded_paths:
             continue
         entries.append(
@@ -156,7 +155,7 @@ def _manifest_entries(base: Path, excluded_paths: set[str]) -> tuple[ManifestEnt
                 sha256=_file_digest(path),
             )
         )
-    return tuple(entries)
+    return tuple(sorted(entries, key=lambda entry: entry.path))
 
 
 def build_manifest(

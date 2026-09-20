@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .audit import AuditReport, IGNORED_DIRECTORIES, audit_public_tree
+from .audit import AuditReport, audit_public_tree
+from .tree import is_link, public_paths
 from .catalog import release
 from .manifest import IntegrityReport, ReleaseManifest, verify_manifest
 
@@ -104,9 +105,8 @@ class ReleaseReport:
 
 def _file_statistics(root: Path) -> tuple[int, int, tuple[ExtensionSummary, ...]]:
     totals: dict[str, list[int]] = {}
-    for path in root.rglob("*"):
-        relative = path.relative_to(root)
-        if not path.is_file() or any(part in IGNORED_DIRECTORIES for part in relative.parts):
+    for path in public_paths(root):
+        if is_link(path) or not path.is_file():
             continue
         extension = path.suffix.lower() or "(no extension)"
         bucket = totals.setdefault(extension, [0, 0])

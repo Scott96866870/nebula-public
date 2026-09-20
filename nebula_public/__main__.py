@@ -185,7 +185,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if boundary_report.ok else 1
 
     if command == "manifest":
-        output = args.output.expanduser() if args.output is not None else None
+        output = args.output.expanduser().absolute() if args.output is not None else None
         if output is not None and output.exists() and not args.force:
             print(f"Refusing to overwrite existing file: {output}")
             return 2
