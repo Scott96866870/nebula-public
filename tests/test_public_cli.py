@@ -43,7 +43,7 @@ class PublicCliTests(unittest.TestCase):
     def test_default_info_is_read_only_metadata(self) -> None:
         payload = self.run_json_command()
         self.assertEqual(payload["name"], "Nebula Public Edition")
-        self.assertEqual(payload["version"], "0.6.1")
+        self.assertEqual(payload["version"], "0.6.2")
         self.assertNotIn("excluded", payload)
 
     def test_catalog_describes_public_boundary(self) -> None:
