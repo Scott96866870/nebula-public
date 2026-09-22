@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.1**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.2**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -49,6 +49,15 @@ and `1` when it finds a blocked path. It never sends data or connects to an
 external service. `export` writes only to the explicitly supplied local path
 and will not replace an existing file unless `--force` is used.
 
+`export`, `manifest --output`, and `bundle` stage output beside the destination
+and publish it only after a successful write. A handled write failure preserves
+the previous destination and removes the temporary file. Without `--force`,
+publication uses an exclusive hard link to avoid overwriting a file created
+by another process; this requires a filesystem with hard-link support (such
+as NTFS, ext4, or APFS). `--force` uses atomic replacement. Output links and
+non-regular destinations are rejected. I/O errors return status `2` and a JSON
+error instead of a traceback. Text outputs use UTF-8 with LF line endings.
+
 ## Integrity manifests
 
 `manifest` creates a deterministic JSON snapshot of every included file. Each
@@ -79,6 +88,14 @@ Filesystem symbolic links, broken links, and Windows junctions/reparse points
 inside the source tree are rejected. The scanner never descends into them.
 Use regular files and directories in a stable source tree while building;
 validation and packaging are not an atomic filesystem snapshot.
+
+ZIP entries are copied in 1 MiB chunks, so large files are not loaded into
+memory at once. When `--manifest` is supplied, the size and SHA-256 digest of
+the bytes actually written to each entry are checked again before publishing.
+A mismatch leaves the previous ZIP intact. ZIP creator metadata is normalized
+across operating systems; archive bytes may differ from 0.6.1 even with the same
+inputs. At the Python API level, `create_bundle(..., overwrite=False)` enables
+exclusive publication; the default remains `True` for compatibility.
 
 `report` combines the boundary audit, optional manifest integrity check,
 version alignment, file count, byte total, extension summary, and actionable
