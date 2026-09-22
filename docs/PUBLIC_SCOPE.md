@@ -56,6 +56,13 @@ Directory traversal never follows these links, even if their names match an
 ignored directory. Regular `.git`, `.pytest_cache`, and `__pycache__` directories
 are pruned. Release builds require an unchanged input tree during the operation.
 
+Release outputs are staged in the destination directory and published after
+successful writing. Handled failures preserve the previous output and clean up
+staging files; an abruptly terminated process may leave a `.nebula-*.tmp` file
+that should be removed before another release build. No-overwrite publication
+requires filesystem hard-link support. ZIP input is streamed and, when supplied,
+the manifest is checked against the actual bytes written before publication.
+
 The `report` command aggregates the boundary audit, optional manifest check,
 file statistics, and next-step recommendations. It reads only the selected
 local directory and manifest file.

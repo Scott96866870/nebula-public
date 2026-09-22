@@ -12,6 +12,7 @@ from .bundle import create_bundle
 from .catalog import release
 from .manifest import build_manifest, compare_manifests, load_manifest, verify_manifest
 from .report import build_release_report
+from .output import write_text_output
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -154,6 +155,14 @@ def _release_output(format_name: str) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except (OSError, ValueError) as error:
+        print(json.dumps({"ok": False, "error": str(error)}, indent=2))
+        return 2
+
+
+def _main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     command = args.command or "info"
     if command == "version":
@@ -200,7 +209,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if output is None:
             print(manifest.to_json(), end="")
             return 0
-        output.write_text(manifest.to_json(), encoding="utf-8")
+        write_text_output(output, manifest.to_json(), overwrite=args.force)
         print(output.resolve())
         return 0
 
@@ -228,6 +237,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.path,
                 output,
                 manifest=(load_manifest(args.manifest) if args.manifest else None),
+                overwrite=args.force,
             )
         except ValueError as error:
             print(json.dumps({"ok": False, "error": str(error)}, indent=2))
@@ -264,7 +274,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not output.parent.is_dir():
             print(f"Output directory does not exist: {output.parent}")
             return 2
-        output.write_text(_release_output(args.format), encoding="utf-8")
+        write_text_output(output, _release_output(args.format), overwrite=args.force)
         print(output.resolve())
         return 0
 
