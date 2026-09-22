@@ -146,7 +146,7 @@ class ReleaseOutputTests(unittest.TestCase):
             original_open = Path.open
 
             def fail_on_readme(path, *args, **kwargs):
-                if path == root / "README.md":
+                if path.resolve() == (root / "README.md").resolve():
                     raise PermissionError("fixture unreadable")
                 return original_open(path, *args, **kwargs)
 
