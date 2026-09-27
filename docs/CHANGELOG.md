@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.3
+
+- Reject boolean/floating-point schema versions and file sizes instead of
+  interpreting them as integers.
+- Reject duplicate JSON fields at all nesting levels and normalize invalid
+  UTF-8 manifest errors into the CLI's JSON error response.
+- Apply platform-independent canonical relative path validation, preserving
+  Unicode filenames and spaces while rejecting ambiguous path syntax.
+- Validate Python-constructed manifests, including duplicate paths,
+  included/excluded overlaps, empty metadata, and file/directory conflicts.
+- Deduplicate repeated build exclusions so generated manifests load cleanly.
+- Add manifest parsing, API validation, round-trip, and CLI regression tests.
+
 ## 0.6.2
 
 - Stage ZIP, manifest, and release-card outputs beside their destinations;

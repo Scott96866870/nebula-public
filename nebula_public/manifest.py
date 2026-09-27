@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Iterable
 
 from .tree import public_paths, require_regular_path
@@ -36,6 +36,9 @@ class ReleaseManifest:
     release_version: str
     entries: tuple[ManifestEntry, ...]
     excluded_paths: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _validate_manifest(self)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -166,11 +169,11 @@ def build_manifest(
     if not base.is_dir():
         raise ValueError(f"Manifest path is not a directory: {base}")
 
-    excluded_paths = sorted(
+    excluded_paths = sorted({
         relative
         for item in exclude
         if (relative := _relative_path(base, Path(item))) is not None
-    )
+    })
     return ReleaseManifest(
         schema_version=MANIFEST_SCHEMA_VERSION,
         release_name=release.name,
@@ -184,11 +187,17 @@ def load_manifest(path: str | Path) -> ReleaseManifest:
     """Load and validate a JSON release manifest from disk."""
     source = Path(path).expanduser()
     try:
-        data = json.loads(source.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+        data = json.loads(
+            source.read_text(encoding="utf-8"), object_pairs_hook=_unique_json_object
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ValueError(f"Unable to read manifest: {source}") from error
 
-    if not isinstance(data, dict) or data.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+    if (
+        not isinstance(data, dict)
+        or type(data.get("schema_version")) is not int
+        or data["schema_version"] != MANIFEST_SCHEMA_VERSION
+    ):
         raise ValueError("Unsupported or invalid manifest schema")
     release_data = data.get("release")
     file_data = data.get("files")
@@ -212,7 +221,7 @@ def load_manifest(path: str | Path) -> ReleaseManifest:
         entry_digest = item.get("sha256")
         if (
             not isinstance(entry_path, str)
-            or not isinstance(entry_size, int)
+            or type(entry_size) is not int
             or entry_size < 0
             or not isinstance(entry_digest, str)
             or len(entry_digest) != 64
@@ -238,13 +247,54 @@ def _validate_relative_paths(values: list[object], label: str) -> list[str]:
     for value in values:
         if not isinstance(value, str):
             raise ValueError(f"Manifest {label} must be a string")
-        candidate = Path(value)
-        if candidate.is_absolute() or ".." in candidate.parts or value != candidate.as_posix():
+        candidate = PurePosixPath(value)
+        if (
+            not value or value == "." or candidate.is_absolute()
+            or PureWindowsPath(value).drive or "\\" in value or ":" in value
+            or any(ord(char) < 32 or ord(char) == 127 for char in value)
+            or ".." in candidate.parts or value != candidate.as_posix()
+        ):
             raise ValueError(f"Manifest {label} must be a relative POSIX path")
         paths.append(value)
     if len(set(paths)) != len(paths):
         raise ValueError(f"Manifest contains duplicate {label}s")
     return sorted(paths)
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Manifest contains duplicate JSON field: {key}")
+        result[key] = value
+    return result
+
+
+def _validate_manifest(manifest: ReleaseManifest) -> None:
+    if type(manifest.schema_version) is not int or manifest.schema_version != MANIFEST_SCHEMA_VERSION:
+        raise ValueError("Unsupported or invalid manifest schema")
+    if any(not isinstance(value, str) or not value.strip()
+           for value in (manifest.release_name, manifest.release_version)):
+        raise ValueError("Manifest release name and version must be non-empty strings")
+    if not isinstance(manifest.entries, tuple) or not isinstance(manifest.excluded_paths, tuple):
+        raise ValueError("Manifest entries and exclusions must be immutable tuples")
+    paths: list[object] = []
+    for entry in manifest.entries:
+        if (
+            not isinstance(entry, ManifestEntry)
+            or type(entry.size) is not int or entry.size < 0
+            or not isinstance(entry.sha256, str) or len(entry.sha256) != 64
+            or any(char not in "0123456789abcdef" for char in entry.sha256)
+        ):
+            raise ValueError("Manifest contains an invalid file entry")
+        paths.append(entry.path)
+    included = set(_validate_relative_paths(paths, "file path"))
+    excluded = set(_validate_relative_paths(list(manifest.excluded_paths), "excluded path"))
+    if included & excluded:
+        raise ValueError("Manifest file paths overlap excluded paths")
+    for path in included:
+        if any(parent.as_posix() in included for parent in PurePosixPath(path).parents):
+            raise ValueError("Manifest file paths contain a file/directory conflict")
 
 
 def verify_manifest(
