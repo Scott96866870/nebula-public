@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.2**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.3**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -66,6 +66,17 @@ timestamp or upload anything. When the destination is inside the inspected
 directory, the manifest automatically excludes itself.
 Relative CLI output paths are interpreted from the current working directory,
 including when `--path` selects a different source directory.
+
+Manifest schema version and file sizes must be integers, not JSON booleans or
+floating-point values. Duplicate JSON fields, duplicate paths, empty release
+metadata, included/excluded overlaps, and file/directory conflicts are rejected.
+Paths use the same canonical relative POSIX syntax on every platform: no drive
+prefixes, backslashes, colons, control characters, empty paths, `.`/`..` segments,
+repeated separators, or trailing slash. Unicode and spaces remain supported.
+This validates path syntax; it does not guarantee every filename is supported
+by every filesystem. The Python `ReleaseManifest` constructor applies the same
+validation and requires tuples for entries and exclusions. Existing valid
+schema-1 manifests remain supported; regenerate ambiguous older manifests.
 
 Use `verify --manifest release-manifest.json` before sharing an archive or
 cutting a release. In addition to the public-boundary audit, it reports files
