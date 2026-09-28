@@ -43,7 +43,7 @@ class PublicCliTests(unittest.TestCase):
     def test_default_info_is_read_only_metadata(self) -> None:
         payload = self.run_json_command()
         self.assertEqual(payload["name"], "Nebula Public Edition")
-        self.assertEqual(payload["version"], "0.6.3")
+        self.assertEqual(payload["version"], "0.6.4")
         self.assertNotIn("excluded", payload)
 
     def test_catalog_describes_public_boundary(self) -> None:
@@ -92,8 +92,33 @@ class PublicCliTests(unittest.TestCase):
             status, message = self.run_command("export", "--output", str(output))
 
             self.assertEqual(status, 2)
-            self.assertIn("Refusing to overwrite", message)
+            self.assertEqual(json.loads(message), {
+                "ok": False,
+                "error": f"Refusing to overwrite existing file: {output}",
+            })
             self.assertEqual(output.read_text(encoding="utf-8"), "original")
+
+    def test_output_preflight_errors_are_json_for_all_writers(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.make_public_tree(root)
+            existing = root / "existing.out"
+            existing.write_text("original", encoding="utf-8")
+            missing_parent = root / "missing" / "output"
+
+            cases = (
+                ("manifest", ("--path", str(root), "--output", str(existing))),
+                ("bundle", ("--path", str(root), "--output", str(existing))),
+                ("export", ("--output", str(missing_parent))),
+                ("manifest", ("--path", str(root), "--output", str(missing_parent))),
+            )
+            for command, arguments in cases:
+                with self.subTest(command=command, arguments=arguments):
+                    status, output = self.run_command(command, *arguments)
+                    self.assertEqual(status, 2)
+                    payload = json.loads(output)
+                    self.assertFalse(payload["ok"])
+                    self.assertIn("error", payload)
 
     def test_manifest_round_trip_and_integrity_check(self) -> None:
         with TemporaryDirectory() as temp_dir:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.4
+
+- Return every CLI preflight error as a structured JSON object with `ok: false`
+  and exit status 2, including overwrite and missing-output-directory checks.
+- Add regression coverage for manifest, bundle, and export writer errors.
+
 ## 0.6.3
 
 - Reject boolean/floating-point schema versions and file sizes instead of

@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.3**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.4**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
