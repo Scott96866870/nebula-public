@@ -154,6 +154,11 @@ def _release_output(format_name: str) -> str:
     return json.dumps(release.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
+def _cli_error(message: str) -> int:
+    print(json.dumps({"ok": False, "error": message}, indent=2))
+    return 2
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     try:
         return _main(argv)
@@ -196,11 +201,9 @@ def _main(argv: Sequence[str] | None = None) -> int:
     if command == "manifest":
         output = args.output.expanduser().absolute() if args.output is not None else None
         if output is not None and output.exists() and not args.force:
-            print(f"Refusing to overwrite existing file: {output}")
-            return 2
+            return _cli_error(f"Refusing to overwrite existing file: {output}")
         if output is not None and not output.parent.is_dir():
-            print(f"Output directory does not exist: {output.parent}")
-            return 2
+            return _cli_error(f"Output directory does not exist: {output.parent}")
         try:
             manifest = build_manifest(args.path, exclude=(() if output is None else (output,)))
         except ValueError as error:
@@ -230,8 +233,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
     if command == "bundle":
         output = args.output.expanduser()
         if output.exists() and not args.force:
-            print(f"Refusing to overwrite existing file: {output}")
-            return 2
+            return _cli_error(f"Refusing to overwrite existing file: {output}")
         try:
             files = create_bundle(
                 args.path,
@@ -269,11 +271,9 @@ def _main(argv: Sequence[str] | None = None) -> int:
     if command == "export":
         output = args.output.expanduser()
         if output.exists() and not args.force:
-            print(f"Refusing to overwrite existing file: {output}")
-            return 2
+            return _cli_error(f"Refusing to overwrite existing file: {output}")
         if not output.parent.is_dir():
-            print(f"Output directory does not exist: {output.parent}")
-            return 2
+            return _cli_error(f"Output directory does not exist: {output.parent}")
         write_text_output(output, _release_output(args.format), overwrite=args.force)
         print(output.resolve())
         return 0
