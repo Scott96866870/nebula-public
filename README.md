@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.4**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.5**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -38,6 +38,7 @@ python main.py manifest --output release-manifest.json
 python main.py verify --manifest release-manifest.json
 python main.py diff previous-manifest.json release-manifest.json
 python main.py diff previous-manifest.json release-manifest.json --format markdown
+python main.py diff previous-manifest.json release-manifest.json --check
 python main.py bundle --output nebula-public.zip
 python main.py bundle --output nebula-public.zip --manifest release-manifest.json
 python main.py report
@@ -84,7 +85,15 @@ that are missing, modified, or unexpectedly present.
 
 `diff` compares two manifests without reading the underlying source tree. It
 reports added, removed, modified, and unchanged relative paths and can render
-the result as JSON or Markdown for a changelog.
+the result as JSON or Markdown for a changelog. It also reports release name
+or version changes (`metadata_changed`) and changes to the exclusion list
+(`exclusions_added` and `exclusions_removed`). The `changed` field includes all
+three kinds of difference as of 0.6.5; ordering alone is not a change.
+
+Use `diff --check` in CI to return status `1` when any such difference exists,
+`0` when the manifests match, or `2` for invalid inputs or read failures.
+The full report is still printed in the selected format. Without `--check`,
+a successful comparison continues to return `0`, even when changes exist.
 
 `bundle` validates the public boundary before creating a ZIP archive. Entries
 are sorted and use normalized timestamps and permissions, so repeated builds

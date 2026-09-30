@@ -71,6 +71,11 @@ def _parser() -> argparse.ArgumentParser:
     diff_parser.add_argument("left", type=Path, help="Earlier manifest file.")
     diff_parser.add_argument("right", type=Path, help="Later manifest file.")
     diff_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Return status 1 when files, release metadata, or exclusions differ.",
+    )
+    diff_parser.add_argument(
         "--format",
         choices=("json", "markdown"),
         default="json",
@@ -228,7 +233,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
             print(diff.to_markdown(), end="")
         else:
             print(json.dumps(diff.to_dict(), indent=2, sort_keys=True))
-        return 0
+        return 1 if args.check and diff.changed else 0
 
     if command == "bundle":
         output = args.output.expanduser()
