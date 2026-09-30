@@ -82,7 +82,7 @@ class IntegrityReport:
 
 @dataclass(frozen=True)
 class ManifestDiff:
-    """File-level changes between two release manifests."""
+    """File, release metadata, and exclusion changes between manifests."""
 
     left_release: str
     right_release: str
@@ -90,15 +90,24 @@ class ManifestDiff:
     removed: tuple[str, ...]
     modified: tuple[str, ...]
     unchanged: tuple[str, ...]
+    metadata_changed: bool = False
+    exclusions_added: tuple[str, ...] = ()
+    exclusions_removed: tuple[str, ...] = ()
 
     @property
     def changed(self) -> bool:
-        return bool(self.added or self.removed or self.modified)
+        return bool(
+            self.added or self.removed or self.modified or self.metadata_changed
+            or self.exclusions_added or self.exclusions_removed
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
             "added": list(self.added),
             "changed": self.changed,
+            "metadata_changed": self.metadata_changed,
+            "exclusions_added": list(self.exclusions_added),
+            "exclusions_removed": list(self.exclusions_removed),
             "left_release": self.left_release,
             "modified": list(self.modified),
             "removed": list(self.removed),
@@ -112,6 +121,7 @@ class ManifestDiff:
             f"# Manifest diff: {self.left_release} -> {self.right_release}",
             "",
             f"**Changed:** {'yes' if self.changed else 'no'}",
+            f"**Release metadata changed:** {'yes' if self.metadata_changed else 'no'}",
             "",
         ]
         for heading, values in (
@@ -119,6 +129,8 @@ class ManifestDiff:
             ("Removed", self.removed),
             ("Modified", self.modified),
             ("Unchanged", self.unchanged),
+            ("Exclusions added", self.exclusions_added),
+            ("Exclusions removed", self.exclusions_removed),
         ):
             lines.extend([f"## {heading}", ""])
             lines.extend(f"- {value}" for value in values)
@@ -349,4 +361,10 @@ def compare_manifests(left: ReleaseManifest, right: ReleaseManifest) -> Manifest
         unchanged=tuple(
             sorted(path for path in shared if left_entries[path] == right_entries[path])
         ),
+        metadata_changed=(
+            (left.release_name, left.release_version)
+            != (right.release_name, right.release_version)
+        ),
+        exclusions_added=tuple(sorted(set(right.excluded_paths) - set(left.excluded_paths))),
+        exclusions_removed=tuple(sorted(set(left.excluded_paths) - set(right.excluded_paths))),
     )
