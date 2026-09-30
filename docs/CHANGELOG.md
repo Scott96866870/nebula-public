@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.5
+
+- Include release name/version changes and exclusion additions/removals in
+  manifest diffs, in both JSON and Markdown. `changed` now includes these
+  differences even when all file contents match; ordering alone is ignored.
+- Add opt-in `diff --check` for CI: 0 for matching manifests, 1 for differences,
+  and 2 for input/read errors. Default comparison exit behavior is unchanged.
+- Add regression tests for metadata-only and exclusion-only changes, ordering,
+  ambiguous display labels, output formats, and CLI exit statuses.
+
 ## 0.6.4
 
 - Return every CLI preflight error as a structured JSON object with `ok: false`
