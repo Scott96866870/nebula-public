@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.6
+
+- Match blocked filenames and directory names case-insensitively on every
+  platform using explicit case folding and platform-independent glob matching.
+  Linux now rejects names such as `CONFIG.JSON` and `Private.KEY`; mixed-case
+  blocked directories such as `BUILD` are rejected on both Linux and Windows.
+- Preserve original path spelling in audit violations. Apply the same policy
+  through verification, release reports, and pre-bundle boundary checks.
+- Test all blocked filename patterns, blocked directories, allowed similar
+  names, CLI statuses, and archive preservation even with manifest exclusions.
+
 ## 0.6.5
 
 - Include release name/version changes and exclusion additions/removals in
