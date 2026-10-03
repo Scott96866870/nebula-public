@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.5**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.6**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -49,6 +49,14 @@ python main.py report --manifest release-manifest.json --format markdown
 and `1` when it finds a blocked path. It never sends data or connects to an
 external service. `export` writes only to the explicitly supplied local path
 and will not replace an existing file unless `--force` is used.
+
+Blocked filename patterns and blocked directory names are matched without
+regard to case on every platform. For example, `CONFIG.JSON`, `Private.KEY`,
+and `BUILD/` are rejected on Linux as well as Windows. Reports preserve the
+original path spelling. This is a filename policy, not a scan of file contents.
+The rule also applies to `report` and the boundary check before `bundle`,
+including files excluded by a supplied manifest. Existing releases with these
+case variants may fail the stricter 0.6.6 audit.
 
 `export`, `manifest --output`, and `bundle` stage output beside the destination
 and publish it only after a successful write. A handled write failure preserves
