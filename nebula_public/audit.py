@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 from .tree import is_link, public_paths
@@ -73,12 +73,12 @@ def audit_public_tree(root: str | Path) -> AuditReport:
             violations.append(AuditViolation(relative.as_posix(), "filesystem link"))
             continue
         if path.is_dir():
-            if path.name in BLOCKED_DIRECTORY_NAMES:
+            if path.name.casefold() in BLOCKED_DIRECTORY_NAMES:
                 violations.append(AuditViolation(relative.as_posix(), "blocked directory"))
             continue
 
         checked_files += 1
-        if any(fnmatch(path.name, pattern) for pattern in BLOCKED_PATH_PATTERNS):
+        if any(fnmatchcase(path.name.casefold(), pattern) for pattern in BLOCKED_PATH_PATTERNS):
             violations.append(AuditViolation(relative.as_posix(), "blocked file pattern"))
 
     for required in REQUIRED_FILES:
