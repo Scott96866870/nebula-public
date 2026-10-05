@@ -89,6 +89,40 @@ class ManifestValidationTests(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 replace(self.valid(), **changes)
 
+    def test_case_insensitive_file_collisions_are_rejected(self):
+        entry = self.valid().entries[0]
+        cases = (
+            {"entries": (entry, ManifestEntry("A.TXT", 0, "0" * 64))},
+            {"excluded_paths": ("notes.txt", "NOTES.TXT")},
+            {"entries": (
+                ManifestEntry("Straße.txt", 0, "0" * 64),
+                ManifestEntry("STRASSE.TXT", 0, "0" * 64),
+            )},
+            {"excluded_paths": ("A.TXT",),},
+            {"entries": (ManifestEntry("docs/readme.md", 0, "0" * 64),),
+             "excluded_paths": ("DOCS/README.MD",)},
+            {"entries": (
+                ManifestEntry("Docs", 0, "0" * 64),
+                ManifestEntry("docs/readme.md", 0, "0" * 64),
+            )},
+        )
+        for changes in cases:
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                replace(self.valid(), **changes)
+
+    def test_case_insensitive_collisions_are_rejected_when_loading_json(self):
+        data = self.valid().to_dict()
+        data["files"].append({"path": "A.TXT", "size": 0, "sha256": "0" * 64})
+        with self.assertRaisesRegex(ValueError, "case-insensitive"):
+            self.load_payload(data)
+
+    def test_case_distinct_paths_without_collisions_round_trip(self):
+        manifest = replace(self.valid(), entries=(
+            ManifestEntry("Docs/Readme.md", 0, "0" * 64),
+            ManifestEntry("Docs/Usage.md", 0, "0" * 64),
+        ), excluded_paths=("Notes.txt",))
+        self.assertEqual(self.load_payload(manifest.to_dict()), manifest)
+
     def test_invalid_release_metadata_is_rejected(self):
         for field in ("name", "version"):
             for value in ("", "  ", None, 1):
