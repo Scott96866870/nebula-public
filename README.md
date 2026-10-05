@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.6**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.7**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -84,8 +84,14 @@ prefixes, backslashes, colons, control characters, empty paths, `.`/`..` segment
 repeated separators, or trailing slash. Unicode and spaces remain supported.
 This validates path syntax; it does not guarantee every filename is supported
 by every filesystem. The Python `ReleaseManifest` constructor applies the same
-validation and requires tuples for entries and exclusions. Existing valid
-schema-1 manifests remain supported; regenerate ambiguous older manifests.
+validation and requires tuples for entries and exclusions. Paths are also
+compared after Unicode case folding: `Readme.md` and `README.md` cannot appear
+in one manifest, and case-folded file/exclusion overlaps are rejected. This
+reduces ambiguity between case-sensitive and case-insensitive systems. Unicode
+case folding is a conservative policy, not an exact model of any filesystem's
+name comparison; it does not guarantee full filesystem compatibility.
+Existing valid schema-1 manifests remain supported; regenerate ambiguous older
+manifests that contain these collisions.
 
 Use `verify --manifest release-manifest.json` before sharing an archive or
 cutting a release. In addition to the public-boundary audit, it reports files
