@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.7
+
+- Reject manifest paths that collide after Unicode case folding, including
+  duplicate files, file/exclusion overlaps, and file/directory conflicts.
+  This conservatively rejects ambiguous names across filesystems; Unicode case
+  folding does not model every filesystem's name comparison rules.
+- Keep exact path ordering and Unicode/spaces support unchanged. Document the
+  portability rule and add regression coverage for direct construction and
+  JSON loading.
+
 ## 0.6.6
 
 - Match blocked filenames and directory names case-insensitively on every
