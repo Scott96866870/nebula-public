@@ -270,7 +270,14 @@ def _validate_relative_paths(values: list[object], label: str) -> list[str]:
         paths.append(value)
     if len(set(paths)) != len(paths):
         raise ValueError(f"Manifest contains duplicate {label}s")
+    folded = [path.casefold() for path in paths]
+    if len(set(folded)) != len(folded):
+        raise ValueError(f"Manifest contains case-insensitive duplicate {label}s")
     return sorted(paths)
+
+
+def _folded_path(path: str) -> str:
+    return "/".join(part.casefold() for part in PurePosixPath(path).parts)
 
 
 def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -302,10 +309,15 @@ def _validate_manifest(manifest: ReleaseManifest) -> None:
         paths.append(entry.path)
     included = set(_validate_relative_paths(paths, "file path"))
     excluded = set(_validate_relative_paths(list(manifest.excluded_paths), "excluded path"))
-    if included & excluded:
+    folded_included = {_folded_path(path) for path in included}
+    folded_excluded = {_folded_path(path) for path in excluded}
+    if folded_included & folded_excluded:
         raise ValueError("Manifest file paths overlap excluded paths")
     for path in included:
-        if any(parent.as_posix() in included for parent in PurePosixPath(path).parents):
+        folded_parents = {
+            _folded_path(parent.as_posix()) for parent in PurePosixPath(path).parents
+        }
+        if folded_parents & folded_included:
             raise ValueError("Manifest file paths contain a file/directory conflict")
 
 
