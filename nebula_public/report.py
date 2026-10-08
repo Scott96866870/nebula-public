@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from html import escape
 from pathlib import Path
+import re
 
 from .audit import AuditReport, audit_public_tree
 from .tree import is_link, public_paths
 from .catalog import release
 from .manifest import IntegrityReport, ReleaseManifest, verify_manifest
+
+
+def _markdown_text(value: str) -> str:
+    """Keep filenames literal and on one line in Markdown lists."""
+    value = "".join(
+        f"\\x{ord(char):02x}" if ord(char) < 32 or ord(char) == 127 else char
+        for char in value
+    )
+    return re.sub(r"([\\`*_\[\]{}()#+.!|~>-])", r"\\\1", escape(value, quote=False))
 
 
 @dataclass(frozen=True)
@@ -75,13 +86,32 @@ class ReleaseReport:
             f"- Public boundary: {'pass' if self.boundary.ok else 'fail'}",
             f"- Manifest integrity: {self._check_label(self.integrity)}",
             f"- Manifest version: {self._match_label()}",
-            "",
-            "## File Types",
-            "",
         ]
+        if self.boundary.violations:
+            lines.extend(["", "## Boundary violations", ""])
+            lines.extend(
+                f"- {_markdown_text(item.path)}: {_markdown_text(item.reason)}"
+                for item in self.boundary.violations
+            )
+        if self.integrity is not None:
+            lines.extend([
+                "", "## Manifest integrity details", "",
+                f"**Expected files:** {self.integrity.expected_files}",
+                f"**Actual files:** {self.integrity.actual_files}",
+            ])
+            for heading, paths in (
+                ("Missing", self.integrity.missing),
+                ("Modified", self.integrity.modified),
+                ("Unexpected", self.integrity.unexpected),
+            ):
+                lines.extend(["", f"### {heading}", ""])
+                lines.extend(f"- {_markdown_text(path)}" for path in paths)
+                if not paths:
+                    lines.append("- None")
+        lines.extend(["", "## File Types", ""])
         if self.extensions:
             lines.extend(
-                f"- `{item.extension}`: {item.files} file(s), {item.bytes} bytes"
+                f"- {_markdown_text(item.extension)}: {item.files} file(s), {item.bytes} bytes"
                 for item in self.extensions
             )
         else:
