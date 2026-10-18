@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.8
+
+- Include boundary violation paths and reasons in Markdown release reports.
+- Show expected/actual manifest file counts and missing, modified, and
+  unexpected paths, with explicit empty categories for passing checks.
+- Escape filename markup and render control characters literally in Markdown
+  diagnostics and extension summaries. Preserve JSON fields and CLI statuses.
+- Add regression coverage for failed and passing checks, optional manifests,
+  literal filenames, and CLI Markdown/JSON output.
+
 ## 0.6.7
 
 - Reject manifest paths that collide after Unicode case folding, including

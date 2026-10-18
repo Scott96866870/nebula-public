@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.7**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.8**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -134,7 +134,13 @@ exclusive publication; the default remains `True` for compatibility.
 `report` combines the boundary audit, optional manifest integrity check,
 version alignment, file count, byte total, extension summary, and actionable
 recommendations. It is designed for a final offline release review and can be
-rendered as JSON or Markdown.
+rendered as JSON or Markdown. Markdown reports list each boundary violation
+with its path and reason. With `--manifest`, they also show expected/actual
+file counts and separate missing, modified, and unexpected path lists; empty
+lists display `None`. Filename markup is escaped and control characters are
+shown as literal escape sequences so each diagnostic stays on one list line.
+JSON fields retain their original path strings. `report` returns `0` for a
+ready release, `1` when checks fail, or `2` for input/read errors.
 
 The repository's GitHub Actions workflow runs the unit test suite on every
 push to `main` and pull request, on Linux and Windows with Python 3.10–3.13.
