@@ -3,7 +3,7 @@
 Nebula Public Edition is a local Python toolkit for release manifests,
 integrity checks, release reports, and reproducible ZIP bundles.
 
-Current version: **0.6.8**. See [release notes](docs/CHANGELOG.md).
+Current version: **0.6.9**. See [release notes](docs/CHANGELOG.md).
 
 ## Scope
 
@@ -103,6 +103,11 @@ the result as JSON or Markdown for a changelog. It also reports release name
 or version changes (`metadata_changed`) and changes to the exclusion list
 (`exclusions_added` and `exclusions_removed`). The `changed` field includes all
 three kinds of difference as of 0.6.5; ordering alone is not a change.
+
+Markdown diffs render filenames, exclusions, and release labels as literal
+text. Markdown/HTML markup is escaped, and ASCII control characters in release
+labels are displayed as literal escape sequences on one line. JSON retains
+the original strings.
 
 Use `diff --check` in CI to return status `1` when any such difference exists,
 `0` when the manifests match, or `2` for invalid inputs or read failures.
