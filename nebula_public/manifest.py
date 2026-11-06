@@ -10,6 +10,7 @@ from typing import Iterable
 
 from .tree import public_paths, require_regular_path
 from .catalog import release
+from .markdown import markdown_text
 
 
 MANIFEST_SCHEMA_VERSION = 1
@@ -118,7 +119,7 @@ class ManifestDiff:
     def to_markdown(self) -> str:
         """Render a concise release comparison for a changelog or review."""
         lines = [
-            f"# Manifest diff: {self.left_release} -> {self.right_release}",
+            f"# Manifest diff: {markdown_text(self.left_release)} -> {markdown_text(self.right_release)}",
             "",
             f"**Changed:** {'yes' if self.changed else 'no'}",
             f"**Release metadata changed:** {'yes' if self.metadata_changed else 'no'}",
@@ -133,7 +134,7 @@ class ManifestDiff:
             ("Exclusions removed", self.exclusions_removed),
         ):
             lines.extend([f"## {heading}", ""])
-            lines.extend(f"- {value}" for value in values)
+            lines.extend(f"- {markdown_text(value)}" for value in values)
             if not values:
                 lines.append("- None")
             lines.append("")

@@ -55,8 +55,8 @@ class ManifestDiffTests(unittest.TestCase):
         self.assertFalse(diff.metadata_changed)
         self.assertEqual(diff.to_dict()["exclusions_added"], ["b.txt", "z.txt"])
         self.assertEqual(diff.to_dict()["exclusions_removed"], ["notes.txt"])
-        self.assertIn("## Exclusions added\n\n- b.txt\n- z.txt", diff.to_markdown())
-        self.assertIn("## Exclusions removed\n\n- notes.txt", diff.to_markdown())
+        self.assertIn("## Exclusions added\n\n- b\\.txt\n- z\\.txt", diff.to_markdown())
+        self.assertIn("## Exclusions removed\n\n- notes\\.txt", diff.to_markdown())
 
     def test_order_changes_are_not_semantic_changes(self):
         left = replace(self.left, entries=(
@@ -69,6 +69,65 @@ class ManifestDiffTests(unittest.TestCase):
         self.assertEqual(diff.unchanged, ("a.txt", "b.txt"))
         self.assertEqual(diff.exclusions_added, ())
         self.assertEqual(diff.exclusions_removed, ())
+
+    def test_markdown_keeps_paths_literal_in_every_category(self):
+        paths = (
+            "added/[draft](notes).md", "removed/*old*.md",
+            "modified/`code`.txt", "unchanged/<tag>&.txt",
+            "excluded/[new].txt", "excluded/_old_.txt",
+        )
+        added, removed, modified, unchanged, excluded_new, excluded_old = paths
+        left = replace(self.left, entries=(
+            ManifestEntry(removed, 1, "a" * 64),
+            ManifestEntry(modified, 1, "a" * 64),
+            ManifestEntry(unchanged, 1, "a" * 64),
+        ), excluded_paths=(excluded_old,))
+        right = replace(left, entries=(
+            ManifestEntry(added, 1, "a" * 64),
+            ManifestEntry(modified, 2, "b" * 64),
+            ManifestEntry(unchanged, 1, "a" * 64),
+        ), excluded_paths=(excluded_new,))
+        diff = compare_manifests(left, right)
+        expected = (
+            ("Added", "added", r"added/\[draft\]\(notes\)\.md"),
+            ("Removed", "removed", r"removed/\*old\*\.md"),
+            ("Modified", "modified", r"modified/\`code\`\.txt"),
+            ("Unchanged", "unchanged", r"unchanged/&lt;tag&gt;&amp;\.txt"),
+            ("Exclusions added", "exclusions_added", r"excluded/\[new\]\.txt"),
+            ("Exclusions removed", "exclusions_removed", r"excluded/\_old\_\.txt"),
+        )
+        markdown = diff.to_markdown()
+        for (heading, field, escaped), original in zip(expected, paths):
+            with self.subTest(category=heading):
+                self.assertIn(f"## {heading}\n\n- {escaped}\n", markdown)
+                self.assertEqual(diff.to_dict()[field], [original])
+        self.assertEqual(markdown, diff.to_markdown())
+
+    def test_cli_escapes_release_labels_without_changing_json_or_status(self):
+        self.left = replace(self.left, release_name="Old [name]\n# heading",
+                            release_version="1\t*")
+        right = replace(self.left, release_name="New <b>&`name`",
+                        release_version="2\r\n- item\x00\x7f")
+        status, markdown = self.run_diff(right, "--check", "--format", "markdown")
+        self.assertEqual(status, 1)
+        self.assertEqual(markdown.splitlines()[0],
+                         r"# Manifest diff: Old \[name\]\\x0a\# heading 1\\x09\* -> "
+                         r"New &lt;b&gt;&amp;\`name\` 2\\x0d\\x0a\- item\\x00\\x7f")
+        self.assertNotIn("\n# heading", markdown)
+        status, output = self.run_diff(right, "--check")
+        self.assertEqual(status, 1)
+        payload = json.loads(output)
+        self.assertEqual(payload["left_release"],
+                         f"{self.left.release_name} {self.left.release_version}")
+        self.assertEqual(payload["right_release"],
+                         f"{right.release_name} {right.release_version}")
+
+    def test_markdown_preserves_unicode_spaces_and_empty_categories(self):
+        right = replace(self.left, entries=(ManifestEntry("资料/发布 说明.txt", 1, "a" * 64),))
+        self.assertIn(r"- 资料/发布 说明\.txt", compare_manifests(self.left, right).to_markdown())
+        unchanged = compare_manifests(self.left, self.left).to_markdown()
+        for heading in ("Added", "Removed", "Modified", "Exclusions added", "Exclusions removed"):
+            self.assertIn(f"## {heading}\n\n- None\n", unchanged)
 
     def test_check_reports_all_change_types_without_suppressing_output(self):
         changes = (
