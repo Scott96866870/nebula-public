@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.9
+
+- Escape Markdown and HTML markup in manifest diff filenames, exclusions, and
+  release labels, so reports display the original text without interpreting it
+  as links, formatting, or HTML.
+- Render ASCII control characters in release labels as literal escape sequences
+  to keep comparison headings on one line. Preserve JSON values and CLI statuses.
+- Share the existing release-report escaping helper and add regression coverage
+  for all diff categories, CLI formats, Unicode filenames, and empty categories.
+
 ## 0.6.8
 
 - Include boundary violation paths and reasons in Markdown release reports.
