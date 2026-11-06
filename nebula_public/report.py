@@ -3,23 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from html import escape
 from pathlib import Path
-import re
 
 from .audit import AuditReport, audit_public_tree
 from .tree import is_link, public_paths
 from .catalog import release
 from .manifest import IntegrityReport, ReleaseManifest, verify_manifest
-
-
-def _markdown_text(value: str) -> str:
-    """Keep filenames literal and on one line in Markdown lists."""
-    value = "".join(
-        f"\\x{ord(char):02x}" if ord(char) < 32 or ord(char) == 127 else char
-        for char in value
-    )
-    return re.sub(r"([\\`*_\[\]{}()#+.!|~>-])", r"\\\1", escape(value, quote=False))
+from .markdown import markdown_text as _markdown_text
 
 
 @dataclass(frozen=True)
